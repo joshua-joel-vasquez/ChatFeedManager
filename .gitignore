@@ -1,0 +1,49 @@
+﻿
+# env files
+.env
+.env.*
+!.env.example
+
+
+# logs
+*.log
+logs/
+
+
+# ignore json/jsonl inside state/config/bus folders (any depth)
+**/state/**/*.json
+**/state/**/*.jsonl
+**/config/**/*.json
+**/config/**/*.jsonl
+**/bus/**/*.json
+**/bus/**/*.jsonl
+
+# temp json files
+*.json.tmp
+
+# ignore .backup_clear folder anywhere
+**/.backup_clear/**
+
+# ignore json/jsonl inside state/config/bus folders (any depth)
+**/state/**/*.json
+**/state/**/*.jsonl
+**/config/**/*.json
+**/config/**/*.jsonl
+**/bus/**/*.json
+**/bus/**/*.jsonl
+
+# ignore json/jsonl inside Overlays/UnifiedChat
+Overlays/UnifiedChat/**/*.json
+Overlays/UnifiedChat/**/*.jsonl
+
+# ignore all txt files
+*.txt
+
+# python cache
+__pycache__/
+**/__pycache__/**
+
+# spotify token cache
+.spotify_token_cache
+**/.spotify_token_cache
+**/.spotify_token_cache/**

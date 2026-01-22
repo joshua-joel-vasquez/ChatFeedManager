@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ChatManager Dashboard</title>
+  <style>
+    :root{
+      --bg: rgba(0,0,0,0);
+      --panel: rgba(0,0,0,0.45);
+      --panel2: rgba(0,0,0,0.30);
+      --text: #fff;
+      --muted: rgba(255,255,255,0.75);
+      --chip: rgba(255,255,255,0.10);
+      --chip2: rgba(255,255,255,0.16);
+      --border: rgba(255,255,255,0.12);
+      --shadow: rgba(0,0,0,0.35);
+      --radius: 14px;
+      --font: 16px;
+      --line: 1.25;
+
+      --good: rgba(0, 210, 140, 0.22);
+      --warn: rgba(245, 205, 50, 0.20);
+      --bad:  rgba(255, 90, 90, 0.20);
+      --info: rgba(0, 180, 255, 0.18);
+    }
+
+    html, body {
+      margin: 0; padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-size: var(--font);
+      line-height: var(--line);
+      overflow: hidden;
+    }
+
+    .wrap{
+      width: 100vw;
+      height: 100vh;
+      padding: 12px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 30px var(--shadow);
+      backdrop-filter: blur(6px);
+    }
+
+    .left{
+      display:flex;
+      gap: 10px;
+      align-items:center;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+
+    .title{
+      font-weight: 800;
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+    }
+
+    .chips{
+      display:flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+
+    .chip{
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: var(--chip);
+      border: 1px solid var(--border);
+      font-size: 0.85em;
+      white-space: nowrap;
+      color: var(--muted);
+    }
+
+    .chip.good{ background: var(--good); border-color: rgba(0,210,140,0.35); color: rgba(220,255,245,0.92); }
+    .chip.warn{ background: var(--warn); border-color: rgba(245,205,50,0.35); color: rgba(255,250,220,0.95); }
+    .chip.bad{  background: var(--bad);  border-color: rgba(255,90,90,0.40);  color: rgba(255,235,235,0.95); }
+    .chip.info{ background: var(--info); border-color: rgba(0,180,255,0.35);  color: rgba(230,250,255,0.95); }
+
+    .right{
+      display:flex;
+      gap: 10px;
+      align-items:center;
+      color: var(--muted);
+      font-size: 0.85em;
+      white-space: nowrap;
+    }
+
+    .grid{
+      flex: 1;
+      display:grid;
+      grid-template-columns: 1fr 1.35fr;
+      gap: 10px;
+      overflow: hidden;
+    }
+
+    .card{
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 10px 30px var(--shadow);
+      backdrop-filter: blur(6px);
+      overflow: hidden;
+      display:flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .cardHeader{
+      padding: 10px 12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .cardTitle{
+      font-weight: 750;
+      letter-spacing: 0.2px;
+      display:flex;
+      gap: 8px;
+      align-items:center;
+    }
+
+    .subtle{
+      color: var(--muted);
+      font-size: 0.85em;
+      white-space: nowrap;
+    }
+
+    .cardBody{
+      padding: 10px 12px;
+      overflow: auto;
+      min-height: 0;
+    }
+
+    .section{
+      display:flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .row{
+      display:flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: baseline;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: var(--panel2);
+      border: 1px solid rgba(255,255,255,0.10);
+    }
+
+    .mono{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    .small{ font-size: 0.86em; color: var(--muted); }
+    .strong{ font-weight: 700; }
+
+    .pill{
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: var(--chip2);
+      border: 1px solid var(--border);
+      font-size: 0.78em;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      white-space: nowrap;
+    }
+
+    .pill.bot{ background: rgba(0,180,255,0.16); border-color: rgba(0,180,255,0.28); color: rgba(235,250,255,0.95); }
+    .pill.age{ background: rgba(255,255,255,0.10); }
+    .pill.retry{ background: rgba(245,205,50,0.16); border-color: rgba(245,205,50,0.28); color: rgba(255,250,220,0.95); }
+    .pill.dl{ background: rgba(255,90,90,0.16); border-color: rgba(255,90,90,0.28); color: rgba(255,235,235,0.95); }
+
+    .msgText{
+      margin-top: 6px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: rgba(255,255,255,0.92);
+    }
+
+    .cols{
+      display:flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items:center;
+      min-width: 0;
+    }
+
+    .hidden{ display:none !important; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="left">
+        <div class="title">ChatManager</div>
+        <div class="chips" id="chips"></div>
+      </div>
+      <div class="right">
+        <span id="status">Connecting…</span>
+        <span class="mono" id="lastSeen">—</span>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- Left: Users / Leaderboard -->
+      <div class="card">
+        <div class="cardHeader">
+          <div class="cardTitle">
+            <span>Users</span>
+            <span class="pill" id="activePill">Active: 0</span>
+          </div>
+          <div class="subtle" id="windowLabel">window: —</div>
+        </div>
+        <div class="cardBody">
+          <div class="section" id="leaderboard"></div>
+        </div>
+      </div>
+
+      <!-- Right: Inflight -->
+      <div class="card">
+        <div class="cardHeader">
+          <div class="cardTitle">
+            <span>Inflight Queue</span>
+            <span class="pill" id="inflightPill">Inflight: 0</span>
+          </div>
+          <div class="subtle" id="queueLabel">FIFO · retries enabled</div>
+        </div>
+        <div class="cardBody">
+          <div class="section" id="inflight"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const qs = new URLSearchParams(location.search);
+
+  // Serve this overlay from ChatManager/ so these relative paths resolve:
+  const CFG_URL      = qs.get("cfg")      || "../commands.txt";
+  const USERS_URL    = qs.get("users")    || "../state/user_state.json";
+  const INFLIGHT_URL = qs.get("inflight") || "../state/inflight.json";
+
+  // Polling + display limits
+  const POLL_MS = clampInt(qs.get("poll"), 100, 5000, 500);
+  const TOP_USERS = clampInt(qs.get("topUsers"), 1, 100, 15);
+  const MAX_INFLIGHT = clampInt(qs.get("maxInflight"), 1, 200, 40);
+
+  const SHOW_DEADLETTER = (qs.get("dead") ?? "1") !== "0";
+
+  document.documentElement.style.setProperty("--font", clampInt(qs.get("font"), 10, 32, 16) + "px");
+
+  const statusEl = document.getElementById("status");
+  const lastSeenEl = document.getElementById("lastSeen");
+  const chipsEl = document.getElementById("chips");
+
+  const leaderboardEl = document.getElementById("leaderboard");
+  const inflightEl = document.getElementById("inflight");
+
+  const activePill = document.getElementById("activePill");
+  const inflightPill = document.getElementById("inflightPill");
+
+  const windowLabel = document.getElementById("windowLabel");
+  const queueLabel = document.getElementById("queueLabel");
+
+  let lastOkAt = 0;
+
+  function clampInt(v, min, max, def){
+    const n = parseInt(v, 10);
+    if (Number.isFinite(n)) return Math.max(min, Math.min(max, n));
+    return def;
+  }
+
+  function escapeHtml(s){
+    return (s ?? "").replace(/[&<>"']/g, c => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"
+    }[c]));
+  }
+
+  function formatTime(ms){
+    const d = new Date(ms);
+    const hh = String(d.getHours()).padStart(2,"0");
+    const mm = String(d.getMinutes()).padStart(2,"0");
+    const ss = String(d.getSeconds()).padStart(2,"0");
+    return `${hh}:${mm}:${ss}`;
+  }
+
+  async function fetchJson(url){
+    const u = url + (url.includes("?") ? "&" : "?") + "t=" + Date.now();
+    const res = await fetch(u, { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return await res.json();
+  }
+
+  async function fetchText(url){
+    const u = url + (url.includes("?") ? "&" : "?") + "t=" + Date.now();
+    const res = await fetch(u, { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return await res.text();
+  }
+
+  function parsePlatformFromKey(k){
+    const s = String(k || "");
+    const idx = s.indexOf(":");
+    return idx > 0 ? s.slice(0, idx).toLowerCase() : "unknown";
+  }
+
+  function renderChip(text, cls){
+    const div = document.createElement("div");
+    div.className = "chip" + (cls ? (" " + cls) : "");
+    div.textContent = text;
+    return div;
+  }
+
+  function renderLeaderboard(usersObj, windowSeconds){
+    const now = Date.now();
+    const entries = Object.entries(usersObj || {});
+    let activeCount = 0;
+
+    // active by platform
+    const activeByPlat = {};
+
+    const rows = entries.map(([k, v]) => {
+      const points = Number((v||{}).points || 0);
+      const lastSeen = Number((v||{}).last_seen_ms || 0);
+      const isActive = lastSeen && (now - lastSeen) <= windowSeconds * 1000;
+      if (isActive){
+        activeCount++;
+        const p = parsePlatformFromKey(k);
+        activeByPlat[p] = (activeByPlat[p] || 0) + 1;
+      }
+      return { key: k, points, lastSeen, isActive, v: v||{} };
+    });
+
+    rows.sort((a,b) => (b.points - a.points) || (b.lastSeen - a.lastSeen));
+
+    activePill.textContent = `Active: ${activeCount}`;
+    windowLabel.textContent = `window: ${windowSeconds}s`;
+
+    // Leaderboard UI
+    leaderboardEl.innerHTML = "";
+    const top = rows.slice(0, TOP_USERS);
+
+    if (!top.length){
+      leaderboardEl.innerHTML = `<div class="small">No user data yet.</div>`;
+      return { activeCount, activeByPlat };
+    }
+
+    for (const r of top){
+      const p = parsePlatformFromKey(r.key).toUpperCase();
+      const pts = r.points;
+      const msgs = Number(r.v.messages || 0);
+      const likes = Number(r.v.likes || 0);
+      const shares = Number(r.v.shares || 0);
+      const last = r.lastSeen ? formatTime(r.lastSeen) : "—";
+
+      const left = `
+        <div class="cols">
+          <span class="pill">${escapeHtml(p)}</span>
+          <span class="strong mono">${escapeHtml(r.key)}</span>
+          ${r.isActive ? `<span class="pill">ACTIVE</span>` : `<span class="pill">idle</span>`}
+        </div>
+        <div class="msgText small">last: ${escapeHtml(last)} · msgs:${msgs} · likes:${likes} · shares:${shares}</div>
+      `;
+
+      const right = `<div class="strong mono">${pts} pts</div>`;
+
+      const el = document.createElement("div");
+      el.className = "row";
+      el.innerHTML = `<div style="min-width:0">${left}</div><div>${right}</div>`;
+      leaderboardEl.appendChild(el);
+    }
+
+    return { activeCount, activeByPlat };
+  }
+
+  function renderInflight(inflightObj){
+    const now = Date.now();
+    const entries = Object.entries(inflightObj || {})
+      .map(([taskId, meta]) => ({ taskId, meta: meta || {} }));
+
+    // FIFO view: oldest first by sent_ms
+    entries.sort((a,b) => Number(a.meta.sent_ms || 0) - Number(b.meta.sent_ms || 0));
+
+    inflightPill.textContent = `Inflight: ${entries.length}`;
+
+    inflightEl.innerHTML = "";
+    if (!entries.length){
+      inflightEl.innerHTML = `<div class="small">No inflight tasks.</div>`;
+      return { byBot: {} };
+    }
+
+    const byBot = {};
+    for (const e of entries){
+      const bot = String(e.meta.bot || "unknown").toLowerCase();
+      byBot[bot] = (byBot[bot] || 0) + 1;
+    }
+
+    const sliced = entries.slice(0, MAX_INFLIGHT);
+    for (const e of sliced){
+      const meta = e.meta || {};
+      const task = meta.task || {};
+      const bot = String(meta.bot || "unknown").toLowerCase();
+
+      const platform = String((task.platform || "unknown")).toUpperCase();
+      const user = (task.user || {});
+      const uname = String(user.name || user.id || "Unknown");
+      const action = String(task.action || "");
+      const args = String(task.args || "");
+      const retries = Number(meta.retries || 0);
+      const sent = Number(meta.sent_ms || 0);
+      const ageS = sent ? Math.max(0, Math.floor((now - sent)/1000)) : 0;
+
+      const left = `
+        <div class="cols" style="min-width:0">
+          <span class="pill bot">${escapeHtml(bot)}</span>
+          <span class="pill">${escapeHtml(platform)}</span>
+          <span class="pill">${escapeHtml(action)}</span>
+          <span class="pill age">${ageS}s</span>
+          ${retries > 0 ? `<span class="pill retry">retry:${retries}</span>` : ``}
+        </div>
+        <div class="msgText">
+          <span class="strong">${escapeHtml(uname)}</span>
+          <span class="small"> · </span>
+          <span class="mono small">${escapeHtml(args)}</span>
+        </div>
+      `;
+
+      const right = `<div class="mono small">${escapeHtml(e.taskId)}</div>`;
+
+      const el = document.createElement("div");
+      el.className = "row";
+      el.innerHTML = `<div style="min-width:0">${left}</div><div style="max-width:40%;overflow:hidden;text-overflow:ellipsis">${right}</div>`;
+      inflightEl.appendChild(el);
+    }
+
+    if (entries.length > MAX_INFLIGHT){
+      const more = document.createElement("div");
+      more.className = "small";
+      more.textContent = `…and ${entries.length - MAX_INFLIGHT} more inflight task(s).`;
+      inflightEl.appendChild(more);
+    }
+
+    return { byBot };
+  }
+
+  async function countDeadletters(bots){
+    // bots: [{id, deadletter}] in commands.txt
+    const counts = {};
+    if (!SHOW_DEADLETTER) return counts;
+
+    for (const b of (bots || [])){
+      if (!b || !b.enabled) continue;
+      const id = String(b.id || "").toLowerCase();
+      const dl = b.deadletter;
+      if (!id || !dl) continue;
+      try{
+        const txt = await fetchText("../" + dl.replace(/^\.\//,""));
+        // count non-empty lines
+        const n = txt.split("\n").filter(l => l.trim().length > 0).length;
+        counts[id] = n;
+      }catch(e){
+        counts[id] = 0;
+      }
+    }
+    return counts;
+  }
+
+  function renderChips(summary){
+    chipsEl.innerHTML = "";
+
+    // status chips
+    chipsEl.appendChild(renderChip(`Active: ${summary.activeCount}`, summary.activeCount > 0 ? "good" : "info"));
+    chipsEl.appendChild(renderChip(`Inflight: ${summary.inflightCount}`, summary.inflightCount > 0 ? "warn" : "good"));
+
+    // per bot inflight
+    const bots = Object.keys(summary.inflightByBot || {}).sort();
+    for (const b of bots){
+      chipsEl.appendChild(renderChip(`${b}: ${summary.inflightByBot[b]} inflight`, "warn"));
+    }
+
+    // per platform active
+    const plats = Object.keys(summary.activeByPlat || {}).sort((a,b)=> (summary.activeByPlat[b]-summary.activeByPlat[a]));
+    for (const p of plats){
+      chipsEl.appendChild(renderChip(`${p}: ${summary.activeByPlat[p]} active`, "info"));
+    }
+
+    // deadletters
+    const dls = summary.deadletters || {};
+    const dlBots = Object.keys(dls).sort();
+    for (const b of dlBots){
+      const n = dls[b] || 0;
+      if (n > 0){
+        chipsEl.appendChild(renderChip(`${b}: ${n} deadletters`, "bad"));
+      }
+    }
+  }
+
+  async function poll(){
+    try{
+      // cfg first (for window seconds + bots list + dl paths)
+      const cfg = await fetchJson(CFG_URL);
+
+      const windowSeconds = Number(((cfg.earning || {}).active_window_seconds) || 300);
+      const bots = cfg.bots || [];
+
+      const users = await fetchJson(USERS_URL);
+      const inflight = await fetchJson(INFLIGHT_URL);
+
+      const { activeCount, activeByPlat } = renderLeaderboard(users, windowSeconds);
+      const { byBot } = renderInflight(inflight);
+
+      const deadletters = await countDeadletters(bots);
+
+      const inflightCount = Object.keys(inflight || {}).length;
+      renderChips({
+        activeCount,
+        activeByPlat,
+        inflightCount,
+        inflightByBot: byBot,
+        deadletters
+      });
+
+      queueLabel.textContent = `FIFO · inflight ${inflightCount} · poll ${POLL_MS}ms`;
+
+      lastOkAt = Date.now();
+      statusEl.textContent = "Live";
+      lastSeenEl.textContent = formatTime(Date.now());
+    }catch(e){
+      statusEl.textContent = "Waiting…";
+    }finally{
+      setTimeout(poll, POLL_MS);
+    }
+  }
+
+  poll();
+})();
+</script>
+</body>
+</html>

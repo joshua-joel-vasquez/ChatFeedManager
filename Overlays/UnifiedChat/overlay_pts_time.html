@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Unified Chat Overlay + Points</title>
+    <style>
+        :root {
+            --bg: rgba(0, 0, 0, 0);
+            --panel: rgba(0, 0, 0, 0.45);
+            --text: #fff;
+            --muted: rgba(255, 255, 255, 0.75);
+            --chip: rgba(255, 255, 255, 0.10);
+            --chip2: rgba(255, 255, 255, 0.16);
+            --bot: rgba(0, 180, 255, 0.18);
+            --border: rgba(255, 255, 255, 0.12);
+            --shadow: rgba(0, 0, 0, 0.35);
+            --radius: 14px;
+            --font: 16px;
+            --line: 1.25;
+
+            --ptsBg: rgba(0, 0, 0, 0.55);
+            --ptsBorder: rgba(255, 255, 255, 0.18);
+            --ptsText: rgba(255, 255, 255, 0.95);
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+            font-size: var(--font);
+            line-height: var(--line);
+            overflow: hidden;
+        }
+
+        .wrap {
+            width: 100vw;
+            height: 100vh;
+            padding: 12px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: var(--radius);
+            background: var(--panel);
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 30px var(--shadow);
+            backdrop-filter: blur(6px);
+        }
+
+        .topbar .left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            min-width: 0;
+        }
+
+        .title {
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            white-space: nowrap;
+        }
+
+        .activeTotal {
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: var(--chip);
+            border: 1px solid var(--border);
+            font-size: 0.9em;
+            white-space: nowrap;
+        }
+
+        .platformChips {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            min-width: 0;
+        }
+
+        .chip {
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: var(--chip);
+            border: 1px solid var(--border);
+            font-size: 0.85em;
+            white-space: nowrap;
+            color: var(--muted);
+        }
+
+        .right {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            color: var(--muted);
+            font-size: 0.85em;
+            white-space: nowrap;
+            max-width: 58vw;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .list {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow: hidden;
+            justify-content: flex-start;
+        }
+
+        .msg {
+            display: grid;
+            grid-template-columns: 60px 1fr;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: var(--radius);
+            background: var(--panel);
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 30px var(--shadow);
+            backdrop-filter: blur(6px);
+            transform-origin: top left;
+            animation: pop 140ms ease-out;
+        }
+
+        @keyframes pop {
+            from {
+                transform: translateY(-6px);
+                opacity: 0.0;
+            }
+
+            to {
+                transform: translateY(0px);
+                opacity: 1.0;
+            }
+        }
+
+        .msg.bot {
+            background: linear-gradient(180deg, var(--bot), var(--panel));
+            border-color: rgba(0, 180, 255, 0.35);
+        }
+
+        .avatarWrap {
+            width: 60px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            align-items: center;
+            justify-content: flex-start;
+        }
+
+        .avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 999px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.85);
+            user-select: none;
+        }
+
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .pts {
+            padding: 3px 6px;
+            border-radius: 999px;
+            background: var(--ptsBg);
+            border: 1px solid var(--ptsBorder);
+            color: var(--ptsText);
+            font-size: 0.74em;
+            line-height: 1;
+            white-space: nowrap;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+        }
+
+        .meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            min-width: 0;
+        }
+
+        .name {
+            font-weight: 750;
+            max-width: 55vw;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .plat {
+            padding: 3px 7px;
+            border-radius: 999px;
+            background: var(--chip2);
+            border: 1px solid var(--border);
+            font-size: 0.78em;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
+
+        .roles {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .role {
+            padding: 3px 7px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.10);
+            border: 1px solid var(--border);
+            font-size: 0.78em;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .role.mod {
+            background: rgba(0, 210, 140, 0.16);
+            border-color: rgba(0, 210, 140, 0.28);
+            color: rgba(220, 255, 245, 0.9);
+        }
+
+        .role.vip {
+            background: rgba(245, 205, 50, 0.16);
+            border-color: rgba(245, 205, 50, 0.28);
+            color: rgba(255, 250, 220, 0.92);
+        }
+
+        .role.sub {
+            background: rgba(170, 120, 255, 0.16);
+            border-color: rgba(170, 120, 255, 0.28);
+            color: rgba(245, 235, 255, 0.95);
+        }
+
+        .role.broadcaster {
+            background: rgba(255, 90, 90, 0.16);
+            border-color: rgba(255, 90, 90, 0.30);
+            color: rgba(255, 235, 235, 0.95);
+        }
+
+        .badges {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .badgeImg {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            object-fit: cover;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .badgeText {
+            padding: 2px 6px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            font-size: 0.75em;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+
+        .text {
+            margin-top: 6px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .time {
+            color: rgba(255, 255, 255, 0.55);
+            font-size: 0.78em;
+            margin-left: auto;
+            white-space: nowrap;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <div id="topbar" class="topbar">
+            <div class="left">
+                <div class="title">Unified Chat</div>
+                <div id="activeTotal" class="activeTotal">Active: 0</div>
+                <div id="platformChips" class="platformChips"></div>
+            </div>
+            <div class="right">
+                <span id="status">Connecting…</span>
+            </div>
+        </div>
+
+        <div class="chat">
+            <div id="list" class="list"></div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const qs = new URLSearchParams(location.search);
+
+            function clampInt(v, min, max, def) {
+                const n = parseInt(v, 10);
+                if (Number.isFinite(n)) return Math.max(min, Math.min(max, n));
+                return def;
+            }
+
+            // --- normalize ts units (seconds -> ms) ---
+            function normalizeTs(v) {
+                let n = Number(v || 0);
+                if (!Number.isFinite(n) || n <= 0) return Date.now();
+                if (n < 1e12) n = n * 1000;
+                return Math.floor(n);
+            }
+
+            const isFileOrigin = (location.protocol === "file:");
+            const base = qs.get("base") || (isFileOrigin ? "http://127.0.0.1:8080" : "");
+
+            const FEED_URL = qs.get("feed") || (base ? (base + "/chat_feed.json") : "chat_feed.json");
+            const EXTRA_URL_RAW = qs.get("extra");
+            const EXTRA_URL = (EXTRA_URL_RAW == null ? (base ? (base + "/overlay_additions.jsonl") : "overlay_additions.jsonl") : EXTRA_URL_RAW);
+            const EXTRA_ENABLED = !!(EXTRA_URL && EXTRA_URL !== "0" && EXTRA_URL !== "false");
+
+            const USER_STATE_URL_RAW = qs.get("users");
+            const USER_STATE_URL = (USER_STATE_URL_RAW == null ? (base ? (base + "/user_state.json") : "user_state.json") : USER_STATE_URL_RAW);
+
+            const MAX_RENDER = clampInt(qs.get("max"), 1, 500, 50);
+            const POLL_MS = clampInt(qs.get("poll"), 100, 5000, 350);
+
+            const SHOW_TOPBAR = (qs.get("topbar") ?? "1") !== "0";
+            const FONT_SIZE = clampInt(qs.get("font"), 10, 32, 16);
+
+            const BOT_PREFIX = qs.get("botprefix") || "[SpotifyBot]";
+
+            document.documentElement.style.setProperty("--font", FONT_SIZE + "px");
+            if (!SHOW_TOPBAR) document.getElementById("topbar").classList.add("hidden");
+
+            const listEl = document.getElementById("list");
+            const statusEl = document.getElementById("status");
+            const activeTotalEl = document.getElementById("activeTotal");
+            const platformChipsEl = document.getElementById("platformChips");
+
+            let lastSig = "";
+            let lastOkAt = 0;
+            let userState = {};
+
+            // ----------------------------
+            // ARRIVAL ORDER TRACKING
+            // ----------------------------
+            // seq increases only when we first see a new message key
+            let seqCounter = 0;
+            const seqMap = new Map();
+
+            function escapeHtml(s) {
+                return (s ?? "").replace(/[&<>\"']/g, c => ({
+                    "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;"
+                }[c]));
+            }
+
+            function formatTime(ms) {
+                const d = new Date(normalizeTs(ms));
+                const hh = String(d.getHours()).padStart(2, "0");
+                const mm = String(d.getMinutes()).padStart(2, "0");
+                const ss = String(d.getSeconds()).padStart(2, "0");
+                return `${hh}:${mm}:${ss}`;
+            }
+
+            function normalizePlatform(p) {
+                return String(p || "unknown").trim().toLowerCase();
+            }
+
+            function normalizeUserId(u) {
+                return String(u?.key || u?.id || u?.userId || u?.uniqueId || u?.name || u?.displayName || u?.username || u?.handle || "unknown").trim();
+            }
+
+            function makeUserKey(platform, user) {
+                return (normalizePlatform(platform) + ":" + normalizeUserId(user)).toLowerCase();
+            }
+
+            // Build a stable key so the same message keeps the same seq across polls.
+            // Prefer a real id if present; otherwise fall back to platform+user+ts+text.
+            // IMPORTANT: do NOT use normalizeTs here (it returns Date.now when missing, which would change every poll).
+            function stableMsgKey(raw) {
+                const plat = normalizePlatform(raw?.platform || raw?.source || "unknown");
+                const id = raw?.id || raw?.msgId || raw?.messageId || raw?.mid || raw?.uuid;
+                if (id) return `${plat}|${String(id)}`;
+
+                const user = (raw?.user && typeof raw.user === "object") ? raw.user : {};
+                const userId = normalizeUserId(user);
+                const text = String(raw?.message || raw?.text || "");
+                const tsPart = (raw?.ts != null) ? String(raw.ts) : ""; // raw, not normalized
+                return `${plat}|${userId}|${tsPart}|${text}`;
+            }
+
+            function getArrivalSeq(raw) {
+                const k = stableMsgKey(raw);
+                let s = seqMap.get(k);
+                if (s == null) {
+                    s = ++seqCounter;
+                    seqMap.set(k, s);
+                }
+                return { key: k, seq: s };
+            }
+
+            function isBotMessage(m) {
+                const user = m.user || {};
+                const msg = (m.message || "");
+                return !!user.isBot || (BOT_PREFIX && msg.startsWith(BOT_PREFIX));
+            }
+
+            function rolePills(user) {
+                const pills = [];
+                if (user.isBroadcaster) pills.push({ k: "broadcaster", t: "BROADCASTER" });
+                if (user.isMod) pills.push({ k: "mod", t: "MOD" });
+                if (user.isVip || user.isVIP) pills.push({ k: "vip", t: "VIP" });
+                if (user.isSubscriber || user.isSub) pills.push({ k: "sub", t: "SUB" });
+                return pills;
+            }
+
+            function renderBadges(user) {
+                const badges = Array.isArray(user.badges) ? user.badges : [];
+                const parts = [];
+                for (const b of badges) {
+                    if (!b) continue;
+                    const name = (b.name || "").trim();
+                    const url = (b.url || "").trim();
+                    if (!name && !url) continue;
+
+                    if (url) {
+                        parts.push(`<img class="badgeImg" src="${escapeHtml(url)}" alt="${escapeHtml(name)}" />`);
+                    } else if (name) {
+                        parts.push(`<span class="badgeText">${escapeHtml(name)}</span>`);
+                    }
+                }
+                return parts.join("");
+            }
+
+            function parseJsonl(text) {
+                const out = [];
+                const lines = (text || "").split(/\r?\n/);
+                for (const ln of lines) {
+                    const s = ln.trim();
+                    if (!s) continue;
+                    try {
+                        const obj = JSON.parse(s);
+                        if (obj && typeof obj === "object") out.push(obj);
+                    } catch (e) { }
+                }
+                return out;
+            }
+
+            function toChatObj(m) {
+                if (!m || typeof m !== "object") return null;
+                const t = String(m.type || "chat").toLowerCase();
+                if (t !== "chat") return null;
+
+                const user = (m.user && typeof m.user === "object") ? m.user : {};
+                const { seq } = getArrivalSeq(m);
+
+                return {
+                    type: "chat",
+                    // keep ts for display only
+                    ts: normalizeTs(m.ts),
+                    platform: String(m.platform || m.source || "unknown"),
+                    message: String(m.message || m.text || ""),
+                    user,
+                    // arrival ordering
+                    seq
+                };
+            }
+
+            // Merge and order by ARRIVAL (seq), not by ts
+            function mergeByArrival(feedMsgs, extraMsgs) {
+                const merged = [];
+                for (const m of (Array.isArray(feedMsgs) ? feedMsgs : [])) {
+                    const obj = toChatObj(m);
+                    if (obj) merged.push(obj);
+                }
+                for (const m of (Array.isArray(extraMsgs) ? extraMsgs : [])) {
+                    const obj = toChatObj(m);
+                    if (obj) merged.push(obj);
+                }
+                merged.sort((a, b) => (a.seq || 0) - (b.seq || 0)); // oldest arrival -> newest arrival
+                return merged;
+            }
+
+            function getPointsForMessage(m) {
+                const key = makeUserKey(m.platform, m.user || {});
+                const entry = userState[key];
+                const pts = Number((entry && entry.points != null) ? entry.points : 0);
+                return Number.isFinite(pts) ? pts : 0;
+            }
+
+            function renderMessage(m) {
+                const user = m.user || {};
+                const plat = (m.platform || "unknown").toUpperCase();
+                const name = user.name || user.displayName || user.username || user.handle || "Unknown";
+                const msg = m.message || "";
+                const bot = isBotMessage(m);
+
+                const avatarUrl = (user.avatar || "").trim();
+                const initials = (name || "?").slice(0, 1).toUpperCase();
+
+                const roles = rolePills(user).map(r => `<span class="role ${r.k}">${r.t}</span>`).join("");
+
+                let displayMsg = msg;
+                if (BOT_PREFIX && displayMsg.startsWith(BOT_PREFIX)) {
+                    displayMsg = displayMsg.slice(BOT_PREFIX.length).trimStart();
+                }
+
+                const pts = getPointsForMessage(m);
+
+                return `
+      <div class="msg ${bot ? "bot" : ""}">
+        <div class="avatarWrap">
+          <div class="avatar">
+            ${avatarUrl ? `<img src="${escapeHtml(avatarUrl)}" alt="" />` : `<span>${escapeHtml(initials)}</span>`}
+          </div>
+          <div class="pts">${pts} pts</div>
+        </div>
+        <div>
+          <div class="meta">
+            <span class="plat">${escapeHtml(plat)}</span>
+            <span class="name">${escapeHtml(name)}</span>
+            <span class="badges">${renderBadges(user)}</span>
+            <span class="roles">${roles}</span>
+            <span class="time">${formatTime(m.ts)}</span>
+          </div>
+          <div class="text">${escapeHtml(displayMsg)}</div>
+        </div>
+      </div>
+    `;
+            }
+
+            function renderFeed(feed, mergedMessages) {
+                const activeTotal = feed.activeTotal ?? 0;
+                const by = feed.activeByPlatform ?? {};
+                activeTotalEl.textContent = `Active: ${activeTotal}`;
+
+                platformChipsEl.innerHTML = "";
+                if (by && typeof by === "object") {
+                    const entries = Object.entries(by).sort((a, b) => (b[1] || 0) - (a[1] || 0));
+                    for (const [p, c] of entries) {
+                        const chip = document.createElement("div");
+                        chip.className = "chip";
+                        chip.textContent = `${String(p).toUpperCase()}: ${c}`;
+                        platformChipsEl.appendChild(chip);
+                    }
+                }
+
+                // NEWEST arrival at top (by seq)
+                const newestFirst = [...mergedMessages]
+                    .sort((a, b) => (b.seq || 0) - (a.seq || 0))
+                    .slice(0, MAX_RENDER);
+
+                listEl.innerHTML = newestFirst.map(renderMessage).join("");
+
+                lastOkAt = Date.now();
+                statusEl.textContent = `Live • ${newestFirst.length} msgs`;
+            }
+
+            async function fetchJson(url) {
+                const u = url + (url.includes("?") ? "&" : "?") + "t=" + Date.now();
+                const res = await fetch(u, { cache: "no-store" });
+                if (!res.ok) throw new Error(`Feed HTTP ${res.status} (${url})`);
+                return res.json();
+            }
+
+            async function fetchText(url) {
+                const u = url + (url.includes("?") ? "&" : "?") + "t=" + Date.now();
+                const res = await fetch(u, { cache: "no-store" });
+                if (!res.ok) throw new Error(`Extra HTTP ${res.status} (${url})`);
+                return res.text();
+            }
+
+            async function poll() {
+                try {
+                    statusEl.textContent = `Connecting… (${FEED_URL})`;
+
+                    // points state (best-effort)
+                    try {
+                        const u = USER_STATE_URL + (USER_STATE_URL.includes("?") ? "&" : "?") + "t=" + Date.now();
+                        const resU = await fetch(u, { cache: "no-store" });
+                        if (resU.ok) {
+                            const jsonU = await resU.json();
+                            if (jsonU && typeof jsonU === "object") userState = jsonU;
+                        }
+                    } catch (e) { }
+
+                    const feedPromise = fetchJson(FEED_URL);
+
+                    let extraPromise = Promise.resolve([]);
+                    if (EXTRA_ENABLED) {
+                        extraPromise = fetchText(EXTRA_URL).then(parseJsonl).catch(() => []);
+                    }
+
+                    const [feed, extra] = await Promise.all([feedPromise, extraPromise]);
+
+                    const merged = mergeByArrival(feed.messages, extra);
+
+                    // Signature should reflect:
+                    // - new arrivals (seqCounter changes)
+                    // - message list size changes
+                    // - points for displayed users changing
+                    const newestForSig = merged.slice(-MAX_RENDER); // newest arrivals (merged is seq-ascending)
+                    const ptsSet = new Set();
+                    for (const m of newestForSig) {
+                        ptsSet.add(`${makeUserKey(m.platform, m.user || {})}:${getPointsForMessage(m)}`);
+                    }
+                    const ptsSig = [...ptsSet].join(",");
+
+                    const sig = `${seqCounter}|${merged.length}|${ptsSig}`;
+
+                    if (sig !== lastSig) {
+                        lastSig = sig;
+                        renderFeed(feed, merged);
+                    } else {
+                        if (Date.now() - lastOkAt > 2000) {
+                            statusEl.textContent = `Live • ${Math.min(merged.length, MAX_RENDER)} msgs`;
+                        }
+                    }
+                } catch (e) {
+                    statusEl.textContent = `Error: ${e && e.message ? e.message : e}`;
+                } finally {
+                    setTimeout(poll, POLL_MS);
+                }
+            }
+
+            poll();
+        })();
+    </script>
+
+</body>
+
+</html>
