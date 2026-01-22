@@ -1,0 +1,241 @@
+{
+  "chat_file": "${CHAT_FEED_PATH}",
+  "poll_ms": 350,
+  "process_existing_on_start": false,
+  "reply": {
+    "prefix": "[SpotifyBot]",
+    "max_len": 240
+  },
+  "ssn": {
+    "enabled": true,
+    "session": "${SSN_SESSION}",
+    "allow_fallback": false,
+    "fallback_target": "null",
+    "platform_map": {
+      "twitch_chat": "twitch",
+      "twitch": "twitch",
+      "youtube_live": "youtube",
+      "youtube": "youtube",
+      "kickcom": "kick",
+      "kick": "kick",
+      "tiktok": "tiktok",
+      "tiktok_chat": "tiktok",
+      "tiktok_live": "tiktok",
+      "tt": "tiktok"
+    }
+  },
+  "reply_policy": {
+    "overlay_only_platform_prefixes": [
+      "tiktok"
+    ]
+  },
+  "overlay_fallback": {
+    "enabled": true,
+    "chat_file": "${OVERLAY_CHAT_FILE}",
+    "max_messages": 400,
+    "overlay_events_file": "${OVERLAY_EVENTS_FILE}",
+    "user_state_mirror_file": "${OVERLAY_USER_STATE_FILE}"
+  },
+  "state": {
+    "user_state_file": "state/user_state.json",
+    "inflight_file": "state/inflight.json",
+    "offsets_file": "state/offsets.json"
+  },
+  "earning": {
+    "active_window_seconds": 300,
+    "points_per_minute_active": 1,
+    "points_per_message": 2,
+    "points_per_like": 1,
+    "points_per_share": 5
+  },
+  "bots": [
+    {
+      "id": "spotify",
+      "enabled": true,
+      "instances": 2,
+      "ha": "active_standby",
+      "inbox": "bus/spotify.inbox.jsonl",
+      "outbox": "bus/spotify.outbox.jsonl",
+      "ack": "bus/spotify.ack.jsonl",
+      "deadletter": "bus/deadletter.spotify.jsonl"
+    },
+    {
+      "id": "gamble",
+      "enabled": true,
+      "instances": 1,
+      "inbox": "bus/gamble.inbox.jsonl",
+      "outbox": "bus/gamble.outbox.jsonl",
+      "ack": "bus/gamble.ack.jsonl",
+      "deadletter": "bus/deadletter.gamble.jsonl"
+    }
+  ],
+  "manager_commands": [
+    {
+      "command": "spothelp",
+      "aliases": [],
+      "min_tier": "EVERYONE",
+      "cost_points": 0,
+      "cooldown_seconds": 3,
+      "cooldown_bypass_tier": "VIP",
+      "show_in_help": false
+    },
+    {
+      "command": "points",
+      "aliases": [],
+      "min_tier": "EVERYONE",
+      "cost_points": 0,
+      "cooldown_seconds": 3,
+      "cooldown_bypass_tier": "VIP",
+      "show_in_help": true,
+      "help_lines": [
+        "points",
+        "  Shows your points."
+      ]
+    }
+  ],
+  "help": {
+    "header_lines": [
+      "Every command starts with \"!\" and must be at the beginning of your message.",
+      "Commands are case-insensitive."
+    ]
+  },
+  "commands": [
+    {
+      "command": "sr",
+      "aliases": [
+        "songrequest"
+      ],
+      "bot": "spotify",
+      "action": "sr",
+      "min_tier": "EVERYONE",
+      "cost_points": 0,
+      "cooldown_seconds": 10,
+      "cooldown_bypass_tier": "VIP",
+      "show_in_help": true,
+      "help_lines": [
+        "sr <song/link> OR {Song} by {Artist}",
+        "  Adds a song to the Spotify queue.",
+        "  Example: sr Blinding Lights by The Weeknd"
+      ]
+    },
+    {
+      "command": "np",
+      "aliases": [
+        "nowplaying"
+      ],
+      "bot": "spotify",
+      "action": "np",
+      "min_tier": "EVERYONE",
+      "cost_points": 0,
+      "cooldown_seconds": 3,
+      "cooldown_bypass_tier": "VIP",
+      "show_in_help": true,
+      "help_lines": [
+        "np",
+        "  Shows what is currently playing."
+      ]
+    },
+    {
+      "command": "queue",
+      "aliases": [
+        "q"
+      ],
+      "bot": "spotify",
+      "action": "queue",
+      "min_tier": "EVERYONE",
+      "cost_points": 0,
+      "cooldown_seconds": 5,
+      "cooldown_bypass_tier": "VIP",
+      "show_in_help": true,
+      "help_lines": [
+        "queue [n]",
+        "  Shows now playing + next n songs."
+      ]
+    },
+    {
+      "command": "skip",
+      "aliases": [],
+      "bot": "spotify",
+      "action": "skip",
+      "min_tier": "MOD",
+      "cost_points": 0,
+      "cooldown_seconds": 2,
+      "cooldown_bypass_tier": "MOD",
+      "show_in_help": true,
+      "help_lines": [
+        "skip",
+        "  Skips the current track (mods+)."
+      ]
+    },
+    {
+      "command": "play",
+      "aliases": [],
+      "bot": "spotify",
+      "action": "play",
+      "min_tier": "MOD",
+      "cost_points": 0,
+      "cooldown_seconds": 2,
+      "cooldown_bypass_tier": "MOD",
+      "show_in_help": true,
+      "help_lines": [
+        "play",
+        "  Starts playback (mods+)."
+      ]
+    },
+    {
+      "command": "pause",
+      "aliases": [],
+      "bot": "spotify",
+      "action": "pause",
+      "min_tier": "MOD",
+      "cost_points": 0,
+      "cooldown_seconds": 2,
+      "cooldown_bypass_tier": "MOD",
+      "show_in_help": true,
+      "help_lines": [
+        "pause",
+        "  Pauses playback (mods+)."
+      ]
+    },
+    {
+      "command": "vol",
+      "aliases": [
+        "volume"
+      ],
+      "bot": "spotify",
+      "action": "vol",
+      "min_tier": "MOD",
+      "cost_points": 0,
+      "cooldown_seconds": 2,
+      "cooldown_bypass_tier": "MOD",
+      "show_in_help": true,
+      "help_lines": [
+        "vol <0-100>",
+        "  Sets volume (mods+)."
+      ]
+    },
+    {
+      "command": "slots",
+      "aliases": [
+        "slot"
+      ],
+      "bot": "gamble",
+      "action": "slots",
+      "min_tier": "EVERYONE",
+      "cost_points": 0,
+      "cooldown_seconds": 3,
+      "cooldown_bypass_tier": "VIP",
+      "show_in_help": true,
+      "help_lines": [
+        "slots <amount|max>",
+        "  Spins the slot machine using your points as the wager."
+      ]
+    }
+  ],
+  "logging": {
+    "dir": "../logs",
+    "level": "INFO",
+    "max_bytes": 5242880,
+    "backup_count": 5
+  }
+}

@@ -14,6 +14,56 @@ from typing import Dict, List, Optional
 IS_WINDOWS = (platform.system().lower() == "windows")
 
 
+# Process-management mode:
+# - windows: use taskkill /T for reliable process-tree shutdown
+# - mac:     use POSIX process groups (start_new_session + killpg)
+# - auto:    choose based on host OS
+OS_CHOICES = ("auto", "windows", "mac")
+
+
+def resolve_os_mode(requested: str) -> str:
+    r = (requested or "auto").strip().lower()
+    if r not in OS_CHOICES:
+        r = "auto"
+    if r == "auto":
+        return "windows" if IS_WINDOWS else "mac"
+    # Best-effort: if user forces a mode that doesn't match the host, fall back.
+    if r == "windows" and not IS_WINDOWS:
+        print("[ChatSupervisor] NOTE: --os windows requested, but host is not Windows. Falling back to mac mode.")
+        return "mac"
+    if r == "mac" and IS_WINDOWS:
+        print("[ChatSupervisor] NOTE: --os mac requested, but host is Windows. Falling back to windows mode.")
+        return "windows"
+    return r
+
+
+def load_env_file(path: Path) -> None:
+    """Minimal .env loader (so ChatSupervisor doesn't need python-dotenv).
+
+    Loads KEY=VALUE pairs into os.environ if the key is not already set.
+    Lines starting with '#' and blank lines are ignored.
+    """
+
+    try:
+        if not path.exists():
+            return
+        for raw in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            k = k.strip()
+            v = v.strip().strip('"').strip("'")
+            if not k:
+                continue
+            os.environ.setdefault(k, v)
+    except Exception:
+        # Never crash the supervisor because of a malformed .env
+        pass
+
+
 def is_port_in_use(port: int, host: str = "127.0.0.1") -> bool:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(0.25)
@@ -106,6 +156,14 @@ class ChatSupervisor:
         self.args = args
         self.py = sys.executable
 
+        # Resolve process-management mode early (used for start/stop semantics).
+        self.os_mode = resolve_os_mode(getattr(args, "os", "auto"))
+        print(f"[ChatSupervisor] OS mode: {self.os_mode} (host: {platform.system()})")
+
+        # Load /bot/.env once so child processes inherit environment variables.
+        # (All secrets + machine-specific paths should live there.)
+        load_env_file(self.bot_root / ".env")
+
         self.chatmanager = bot_root / "ChatManager"
         self.overlay_dir = bot_root / "Overlays" / "UnifiedChat"
         self.ssn_dir = bot_root / "SSNChatWriter"
@@ -144,8 +202,18 @@ class ChatSupervisor:
         spec.cwd.mkdir(parents=True, exist_ok=True)
 
         creationflags = 0
-        if IS_WINDOWS and spec.new_console:
-            creationflags |= subprocess.CREATE_NEW_CONSOLE
+        start_new_session = False
+
+        # Windows: optional new console + process-group isolation.
+        if self.os_mode == "windows" and IS_WINDOWS:
+            if spec.new_console:
+                creationflags |= subprocess.CREATE_NEW_CONSOLE
+            # Helps with Ctrl+Break semantics; stop_all uses taskkill /T anyway.
+            creationflags |= subprocess.CREATE_NEW_PROCESS_GROUP
+
+        # mac/Linux: isolate each child into its own process group so we can killpg reliably.
+        if self.os_mode == "mac" and not IS_WINDOWS:
+            start_new_session = True
 
         env = os.environ.copy()
         if spec.env:
@@ -155,8 +223,25 @@ class ChatSupervisor:
         print(f"[ChatSupervisor]   cwd: {spec.cwd}")
         print(f"[ChatSupervisor]   cmd: {' '.join(spec.cmd)}")
 
-        ps.popen = subprocess.Popen(spec.cmd, cwd=str(spec.cwd), env=env, creationflags=creationflags)
+        ps.popen = subprocess.Popen(
+            spec.cmd,
+            cwd=str(spec.cwd),
+            env=env,
+            creationflags=creationflags,
+            start_new_session=start_new_session,
+        )
         ps.start_ts = time.time()
+
+    def _taskkill_tree(self, pid: int, force: bool = False) -> None:
+        if not IS_WINDOWS:
+            return
+        cmd = ["taskkill", "/PID", str(pid), "/T"]
+        if force:
+            cmd.append("/F")
+        try:
+            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        except Exception:
+            pass
 
     def _terminate(self, ps: ProcState) -> None:
         p = ps.popen
@@ -164,6 +249,18 @@ class ChatSupervisor:
             return
         try:
             if p.poll() is None:
+                if self.os_mode == "windows" and IS_WINDOWS:
+                    # Best-effort graceful stop of the whole tree.
+                    self._taskkill_tree(p.pid, force=False)
+                    return
+
+                if self.os_mode == "mac" and not IS_WINDOWS and hasattr(os, "killpg"):
+                    try:
+                        os.killpg(p.pid, signal.SIGTERM)
+                        return
+                    except Exception:
+                        pass
+
                 p.terminate()
         except Exception:
             pass
@@ -174,6 +271,17 @@ class ChatSupervisor:
             return
         try:
             if p.poll() is None:
+                if self.os_mode == "windows" and IS_WINDOWS:
+                    self._taskkill_tree(p.pid, force=True)
+                    return
+
+                if self.os_mode == "mac" and not IS_WINDOWS and hasattr(os, "killpg"):
+                    try:
+                        os.killpg(p.pid, signal.SIGKILL)
+                        return
+                    except Exception:
+                        pass
+
                 p.kill()
         except Exception:
             pass
@@ -493,6 +601,13 @@ def main() -> int:
 
     ap.add_argument("--allow-duplicate-inbox", action="store_true",
                     help="Allow multiple worker instances to read the same inbox (CAN duplicate processing).")
+
+    ap.add_argument(
+        "--os",
+        choices=OS_CHOICES,
+        default="auto",
+        help="Force process management mode (auto/windows/mac). Usually leave as auto.",
+    )
 
     args = ap.parse_args()
 

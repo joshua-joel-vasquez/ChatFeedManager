@@ -46,6 +46,16 @@ def glob_files(base: Path, pattern: str) -> list[Path]:
     return [x for x in base.rglob(pattern) if x.is_file()]
 
 
+def glob_dirs(base: Path, pattern: str) -> list[Path]:
+    if not base.exists():
+        return []
+    return [x for x in base.rglob(pattern) if x.is_dir()]
+
+
+def is_windows() -> bool:
+    return sys.platform.startswith("win")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Clear ChatManager pipeline/state/logs (with optional backups). "
@@ -53,12 +63,15 @@ def main() -> int:
     )
 
     ap.add_argument("--pipeline", action="store_true", help="Clear ChatManager bus pipeline files (*.jsonl).")
-    ap.add_argument("--state", action="store_true", help="Clear ChatManager state (offsets/inflight/gamble queue).")
-    ap.add_argument("--reset-points", action="store_true", help="Also wipe user_state.json (points/ranks).")
-    ap.add_argument("--overlay", action="store_true", help="Clear overlay extras (overlay_additions/events + mirrored user_state).")
+    ap.add_argument("--state", action="store_true", help="Clear ChatManager state (offsets/inflight/queues/status).")
+    ap.add_argument("--ledger", action="store_true", help="Clear points_ledger.jsonl (does NOT wipe user_state.json).")
+    ap.add_argument("--reset-points", action="store_true", help="Wipe user_state.json AND points_ledger.jsonl.")
+    ap.add_argument("--overlay", action="store_true", help="Clear overlay runtime files (json/jsonl) but keep HTML.")
+    ap.add_argument("--bots", action="store_true", help="Clear worker bot state folders (Bots/*/state) and caches.")
     ap.add_argument("--logs", action="store_true", help="Clear bot/logs/*.log (including latest.log).")
-    ap.add_argument("--all", action="store_true", help="Do everything (pipeline + state + overlay + logs).")
+    ap.add_argument("--all", action="store_true", help="Do everything (pipeline + state + ledger + overlay + bots + logs).")
 
+    ap.add_argument("--dry-run", action="store_true", help="Show what would be cleared, but do nothing.")
     ap.add_argument("--no-backup", action="store_true", help="Do not back up files before clearing.")
     ap.add_argument("--yes", action="store_true", help="Do not prompt for confirmation.")
     args = ap.parse_args()
@@ -69,6 +82,7 @@ def main() -> int:
     cm_state = chatmanager / "state"
     overlay_dir = bot_root / "Overlays" / "UnifiedChat"
     logs_dir = bot_root / "logs"
+    bots_dir = bot_root / "Bots"
 
     if not chatmanager.exists():
         print(f"[clear] ERROR: ChatManager folder not found at: {chatmanager}")
@@ -77,11 +91,16 @@ def main() -> int:
     if args.all:
         args.pipeline = True
         args.state = True
+        args.ledger = True
         args.overlay = True
+        args.bots = True
         args.logs = True
 
-    if not (args.pipeline or args.state or args.overlay or args.logs or args.reset_points):
-        print("[clear] Nothing selected. Use --pipeline/--state/--overlay/--logs or --all.")
+    if args.reset_points:
+        args.ledger = True
+
+    if not (args.pipeline or args.state or args.overlay or args.bots or args.logs or args.ledger or args.reset_points):
+        print("[clear] Nothing selected. Use --pipeline/--state/--ledger/--reset-points/--overlay/--bots/--logs or --all.")
         return 2
 
     # Build target list
@@ -94,35 +113,61 @@ def main() -> int:
 
     # STATE: delete offsets/inflight/gamble queue; optionally wipe user_state.json
     if args.state:
-        # offsets + inflight + gamble queue (delete so services re-init cleanly)
+        # offsets + inflight + gamble queue + status (delete so services re-init cleanly)
         for name in [
             "offsets.ingestor.json",
             "offsets.router.json",
             "offsets.emitter.json",
+            "offsets.json",
             "inflight.json",
             "gamble_queue.json",
+            "supervisor_status.json",
+            "supervisor_status.json.tmp",
         ]:
             to_delete.append(cm_state / name)
 
         # some projects also keep other offsets; delete any offsets.*.json
         to_delete += glob_files(cm_state, "offsets.*.json")
 
-        # keep user_state unless reset requested
-        if args.reset_points:
-            to_delete.append(cm_state / "user_state.json")
+        # also clear any stale temp files in state
+        to_delete += glob_files(cm_state, "*.tmp")
+
+    # LEDGER: truncate points ledger (keeps user_state unless reset_points)
+    if args.ledger:
+        to_truncate.append(cm_state / "points_ledger.jsonl")
+
+    # Reset points wipes user_state (and ledger already set above)
+    if args.reset_points:
+        to_delete.append(cm_state / "user_state.json")
+        # also remove overlay mirror, even if --overlay isn't selected
+        to_delete.append(overlay_dir / "user_state.json")
 
     # OVERLAY: truncate overlay extras + (optional) mirror user_state
     if args.overlay:
-        # common overlay extras created by emitter
-        to_truncate.append(overlay_dir / "overlay_additions.jsonl")
-        to_truncate.append(overlay_dir / "overlay_events.jsonl")
-
-        # mirrored points state for overlay
+        # Clear overlay runtime files (keep html/css/js)
+        to_truncate += glob_files(overlay_dir, "*.jsonl")
+        # chat feed and mirrored points state for overlay
+        to_delete.append(overlay_dir / "chat_feed.json")
+        to_delete.append(overlay_dir / "chat_feed.json.tmp")
         to_delete.append(overlay_dir / "user_state.json")
+
+    # BOTS: clear worker bot state folders and common caches
+    if args.bots:
+        # Delete common lock/offset/heartbeat files under Bots/*/state
+        for state_dir in glob_dirs(bots_dir, "state"):
+            to_delete += glob_files(state_dir, "*.lock")
+            to_delete += glob_files(state_dir, "offsets*.json")
+            to_delete += glob_files(state_dir, "processed*.json")
+            to_delete += glob_files(state_dir, "leader*.json")
+            to_delete += glob_files(state_dir, "*.tmp")
+
+        # Spotify token cache file (commonly created next to code)
+        to_delete.append(bots_dir / "Spotify" / ".spotify_token_cache")
 
     # LOGS: truncate all *.log in bot/logs
     if args.logs:
         to_truncate += glob_files(logs_dir, "*.log")
+        to_truncate += glob_files(logs_dir, "*.log.*")
 
     # Remove duplicates and enforce safety (stay under bot root)
     seen = set()
@@ -155,6 +200,10 @@ def main() -> int:
     for p in del_unique:
         rel = p.relative_to(bot_root) if is_under(p, bot_root) else p
         print("   -", rel)
+
+    if args.dry_run:
+        print("\n[clear] DRY RUN: no changes were made.")
+        return 0
 
     if not args.yes:
         resp = input("\nType YES to proceed: ").strip()
@@ -190,7 +239,10 @@ def main() -> int:
             print(f"[clear] ERROR: could not delete {p}: {e}")
 
     print("\n[clear] Done.")
-    print("[clear] Tip: start with a clean run using: py run_all.py --same-console")
+    if is_windows():
+        print("[clear] Tip: start with a clean run using: py run_all.py --same-console")
+    else:
+        print("[clear] Tip: start with a clean run using: python run_all.py --same-console")
     return 0
 
 

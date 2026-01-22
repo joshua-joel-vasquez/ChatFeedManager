@@ -1,5 +1,6 @@
 import json
 import os
+from pathlib import Path
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -21,7 +22,15 @@ from spotify_core import (
 )
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-load_dotenv(os.path.join(BASE_DIR, ".env"))
+
+# Load a single shared .env file from /bot/.env (preferred)
+bot_root = Path(__file__).resolve().parents[2]
+shared_env = bot_root / ".env"
+if shared_env.exists():
+    load_dotenv(shared_env)
+else:
+    # Fallback (lets you run with a local env file if you want)
+    load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 BUS_INBOX = os.path.normpath(os.path.join(BASE_DIR, os.getenv("BUS_INBOX", "../../ChatManager/bus/spotify.inbox.jsonl")))
 BUS_OUTBOX = os.path.normpath(os.path.join(BASE_DIR, os.getenv("BUS_OUTBOX", "../../ChatManager/bus/spotify.outbox.jsonl")))

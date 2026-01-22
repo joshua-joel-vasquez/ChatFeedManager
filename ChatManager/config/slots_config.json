@@ -1,0 +1,12 @@
+{
+  "reels": ["🍒", "🍋", "🍇", "🔔", "⭐", "BAR", "7"],
+  "payouts": [
+    {"name": "777", "pattern": ["7", "7", "7"], "mult": 10, "result_code": "SLOTS_777"},
+    {"name": "TRIPLE_BAR", "pattern": ["BAR", "BAR", "BAR"], "mult": 5, "result_code": "SLOTS_TRIPLE_BAR"},
+    {"name": "TRIPLE_CHERRY", "pattern": ["🍒", "🍒", "🍒"], "mult": 4, "result_code": "SLOTS_TRIPLE_CHERRY"},
+    {"name": "DOUBLE_7", "pattern": ["7", "7", "*"], "mult": 3, "result_code": "SLOTS_DOUBLE_7"},
+    {"name": "DOUBLE_CHERRY", "pattern": ["🍒", "🍒", "*"], "mult": 2, "result_code": "SLOTS_DOUBLE_CHERRY"},
+    {"name": "SINGLE_CHERRY", "pattern": ["🍒", "*", "*"], "mult": 1, "result_code": "SLOTS_SINGLE_CHERRY"}
+  ],
+  "default_loss_mult": 0
+}

@@ -1,5 +1,6 @@
 import os
 import re
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import spotipy
@@ -7,7 +8,15 @@ from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-load_dotenv(os.path.join(BASE_DIR, ".env"))
+
+# Load a single shared .env file from /bot/.env (preferred)
+bot_root = Path(__file__).resolve().parents[2]
+shared_env = bot_root / ".env"
+if shared_env.exists():
+    load_dotenv(shared_env)
+else:
+    # Fallback (lets you run with a local env file if you want)
+    load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 TRACK_URL_RE = re.compile(r"open\.spotify\.com/track/([A-Za-z0-9]+)")
 TRACK_URI_RE = re.compile(r"spotify:track:([A-Za-z0-9]+)")
