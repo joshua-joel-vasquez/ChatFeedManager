@@ -8,7 +8,7 @@ This `bot/` folder is the **main** part of the project. If you want the overlay 
 
 Think of this like a **chat control center** for your stream:
 
-- **SocialStream.Ninja (SSN)** pulls chat from your platforms.
+- **SocialStream.Ninja an outside application in which it links all social platform chats into 1 place (SSN)** pulls chat from your platforms.
 - **SSNChatWriter** saves those incoming messages into a local file.
 - **ChatManager** reads the chat file, awards points, and routes commands to bots.
 - **Bots** (Spotify, Slots/Gamble, etc.) create replies/results.
