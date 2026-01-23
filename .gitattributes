@@ -1,0 +1,16 @@
+# Auto-detect text files and normalize to LF in the repo
+* text=auto
+
+# Force LF for common source files (good cross-platform default)
+*.py  text eol=lf
+*.js  text eol=lf
+*.ts  text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.md  text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Shell scripts must be LF
+*.sh text eol=lf
