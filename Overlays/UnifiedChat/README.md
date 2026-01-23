@@ -12,12 +12,9 @@ This folder contains the actual HTML overlay files OBS loads.
 
 When ChatSupervisor is running, these are available at:
 
-- `http://127.0.0.1:8080/overlays_points.html`
-- `http://127.0.0.1:8080/overlay.html`
-- `http://127.0.0.1:8080/overlay_pts_time.html`
-
-If you use OBS **Local File** instead of a URL, keep `run_all.py` running. The
-HTML will still fetch data from the local overlay server.
+- `http://localhost:8080/overlays_points.html`
+- `http://localhost:8080/overlay.html`
+- `http://localhost:8080/overlay_pts_time.html`
 
 ---
 

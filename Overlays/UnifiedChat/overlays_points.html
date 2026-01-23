@@ -571,18 +571,7 @@
         if (Date.now() - lastOkAt > 2000) statusEl.textContent = `Live • ${merged.length} msgs`;
       }
     } catch(e){
-      const msg = (e && e.message) ? e.message : String(e);
-      let hint = "";
-      if (/Failed to fetch|NetworkError/i.test(msg)){
-        if (location.protocol === "file:"){
-          hint = "If you used OBS Local File, switch to the URL http://127.0.0.1:8080/overlays_points.html (recommended).";
-        } else if (location.protocol === "https:"){
-          hint = "HTTPS pages can’t fetch http://127.0.0.1 (mixed content). Use the http://127.0.0.1:8080/ URL.";
-        } else {
-          hint = "Make sure run_all.py is running and http://127.0.0.1:8080/chat_feed.json opens in your browser.";
-        }
-      }
-      statusEl.textContent = `Error: ${msg}${hint ? " • " + hint : ""}`;
+      statusEl.textContent = `Error: ${e && e.message ? e.message : e}`;
     } finally {
       setTimeout(poll, POLL_MS);
     }
