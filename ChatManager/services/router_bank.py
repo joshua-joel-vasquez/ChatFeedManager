@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import sys
 import time
 import uuid
@@ -15,6 +16,24 @@ if str(_CHATMANAGER_DIR) not in sys.path:
     sys.path.insert(0, str(_CHATMANAGER_DIR))
 
 from shared.logging_setup import setup_logging
+
+
+_ENV_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
+
+
+def expand_env(s: Any) -> Any:
+    """Expand ${VARS} inside strings using os.environ (missing vars -> "")."""
+    if not isinstance(s, str):
+        return s
+    return _ENV_RE.sub(lambda m: os.getenv(m.group(1), ""), s)
+
+
+def resolve_from_bot_root(p: str) -> Path:
+    path = Path(p).expanduser()
+    if path.is_absolute():
+        return path
+    bot_root = Path(__file__).resolve().parents[2]
+    return (bot_root / path).resolve()
 
 
 # ---------------- file helpers ----------------
@@ -359,10 +378,11 @@ class RouterBank:
         # Optional: mirror points state into the overlay folder so overlays can fetch same-origin
         overlay_cfg = self.cfg.get('overlay_fallback') or {}
         mirror_path_raw = overlay_cfg.get('user_state_mirror_file') or ''
+        mirror_path_raw = expand_env(mirror_path_raw)
         self.user_state_mirror_path = None
         if mirror_path_raw:
             try:
-                self.user_state_mirror_path = self._resolve_relative(mirror_path_raw)
+                self.user_state_mirror_path = resolve_from_bot_root(mirror_path_raw)
                 # Ensure it exists early
                 atomic_write_json(self.user_state_mirror_path, self.user_state)
             except Exception:
@@ -1133,3 +1153,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+_ENV_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")

@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import sys
 import time
 import urllib.parse
@@ -15,6 +16,24 @@ if str(_CHATMANAGER_DIR) not in sys.path:
     sys.path.insert(0, str(_CHATMANAGER_DIR))
 
 from shared.logging_setup import setup_logging
+
+
+_ENV_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
+
+
+def expand_env(s: Any) -> Any:
+    """Expand ${VARS} inside strings using os.environ (missing vars -> "")."""
+    if not isinstance(s, str):
+        return s
+    return _ENV_RE.sub(lambda m: os.getenv(m.group(1), ""), s)
+
+
+def resolve_from_bot_root(p: str) -> Path:
+    path = Path(p).expanduser()
+    if path.is_absolute():
+        return path
+    bot_root = Path(__file__).resolve().parents[2]
+    return (bot_root / path).resolve()
 
 
 def ensure_file(p: Path) -> None:
@@ -140,6 +159,7 @@ def main() -> None:
     ssn_cfg = cfg.get("ssn") or {}
     ssn_enabled = bool(ssn_cfg.get("enabled", False))
     ssn_session = str(ssn_cfg.get("session", "") or "").strip()
+    ssn_session = expand_env(ssn_session)
     platform_map = ssn_cfg.get("platform_map") or {}
 
     policy = cfg.get("reply_policy") or {}
@@ -150,12 +170,14 @@ def main() -> None:
 
     overlay_chat_file_raw = str(overlay_cfg.get("chat_file", "") or "").strip() or ""
     overlay_events_file_raw = str(overlay_cfg.get("overlay_events_file", "") or "").strip() or ""
+    overlay_chat_file_raw = expand_env(overlay_chat_file_raw)
+    overlay_events_file_raw = expand_env(overlay_events_file_raw)
 
     overlay_max = int(overlay_cfg.get("max_messages", 400) or 400)
     overlay_events_max = int(overlay_cfg.get("max_events", overlay_max) or overlay_max)
 
-    overlay_chat_file = Path(overlay_chat_file_raw).expanduser() if overlay_chat_file_raw else None
-    overlay_events_file = Path(overlay_events_file_raw).expanduser() if overlay_events_file_raw else None
+    overlay_chat_file = resolve_from_bot_root(overlay_chat_file_raw) if overlay_chat_file_raw else None
+    overlay_events_file = resolve_from_bot_root(overlay_events_file_raw) if overlay_events_file_raw else None
 
     if overlay_chat_file is not None:
         overlay_chat_file = _normalize_overlay_chat_path(overlay_chat_file)

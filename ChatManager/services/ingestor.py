@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -13,6 +14,24 @@ if str(_CHATMANAGER_DIR) not in sys.path:
     sys.path.insert(0, str(_CHATMANAGER_DIR))
 
 from shared.logging_setup import setup_logging
+
+
+_ENV_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
+
+
+def expand_env(s: Any) -> Any:
+    """Expand ${VARS} inside strings using os.environ (missing vars -> "")."""
+    if not isinstance(s, str):
+        return s
+    return _ENV_RE.sub(lambda m: os.getenv(m.group(1), ""), s)
+
+
+def resolve_from_bot_root(p: str) -> Path:
+    path = Path(p).expanduser()
+    if path.is_absolute():
+        return path
+    bot_root = Path(__file__).resolve().parents[2]
+    return (bot_root / path).resolve()
 
 
 def ensure_file(p: Path) -> None:
@@ -206,7 +225,11 @@ def main() -> None:
     cfg = load_json(base_dir / "commands.txt", {})
     log = setup_logging("ingestor", cfg, base_dir)
 
-    chat_file = Path(str(cfg.get("chat_file", ""))).expanduser()
+    chat_file_raw = str(cfg.get("chat_file", "") or "").strip()
+    chat_file_raw = expand_env(chat_file_raw)
+    if not chat_file_raw:
+        raise RuntimeError("commands.txt missing chat_file (or env var not set).")
+    chat_file = resolve_from_bot_root(chat_file_raw)
     poll_ms = int(cfg.get("poll_ms", 350) or 350)
     process_existing = bool(cfg.get("process_existing_on_start", False))
 

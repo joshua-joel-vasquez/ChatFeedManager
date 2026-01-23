@@ -227,6 +227,8 @@ async def run_writer():
     out_path = (os.getenv("CHAT_FEED_PATH") or "").strip()
     if not out_path:
         raise RuntimeError("CHAT_FEED_PATH missing. Add it to /bot/.env (see /bot/.env.example).")
+    if not os.path.isabs(out_path):
+        out_path = str((bot_root / out_path).resolve())
 
     max_messages = env_int("MAX_MESSAGES", 200)
     active_window_seconds = env_int("ACTIVE_WINDOW_SECONDS", 300)
