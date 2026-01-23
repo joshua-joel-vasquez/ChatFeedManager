@@ -94,9 +94,11 @@ Leave this window open while streaming.
 
 Open a browser and go to:
 
-- `http://localhost:8080/overlays_points.html`  (chat + points)
-- `http://localhost:8080/overlay.html`          (basic overlay)
-- `http://localhost:8080/overlay_pts_time.html` (variant overlay)
+- `http://127.0.0.1:8080/overlays_points.html`  (chat + points)
+- `http://127.0.0.1:8080/overlay.html`          (basic overlay)
+- `http://127.0.0.1:8080/overlay_pts_time.html` (variant overlay)
+
+If `localhost` ever gives you trouble on Mac, always use `127.0.0.1`.
 
 If you see a page, the overlay server is working.
 
@@ -105,7 +107,7 @@ If you see a page, the overlay server is working.
 In OBS:
 
 1. Add **Browser Source**
-2. URL: `http://localhost:8080/overlays_points.html`
+2. URL: `http://127.0.0.1:8080/overlays_points.html`
 3. Set width/height (start with 1920×1080 and adjust)
 4. Click OK
 
