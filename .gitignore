@@ -33,6 +33,9 @@ build/
 *.log
 logs/
 
+# --- locks ---
+Bots/**/state/*.lock
+
 # --- Secrets (single private env file lives at /bot/.env) ---
 .env
 .env.*
